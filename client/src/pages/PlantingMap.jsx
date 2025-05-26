@@ -8,8 +8,14 @@ import 'leaflet.markercluster';
 const PlantingMap = () => {
   const [selectedBeneficiary, setSelectedBeneficiary] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [mapLayers, setMapLayers] = useState({
+    street: true,
+    satellite: false,
+    terrain: false
+  });
   const mapRef = useRef(null);
   const markersLayerRef = useRef(null);
+  const tileLayersRef = useRef({});
 
   // Constants for Tacaongaga, Manay, Davao Oriental coordinates
   const TACAONGAGA_CENTER = {
@@ -97,18 +103,73 @@ const PlantingMap = () => {
     setIsLoading(false);
   }, [createPlantIcon, generateBeneficiaryData]);
 
+  // Initialize map layers
+  const initializeMapLayers = useCallback(() => {
+    if (!mapRef.current) return;
+
+    // Street map (OpenStreetMap)
+    tileLayersRef.current.street = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 19
+    });
+
+    // Satellite imagery (ESRI World Imagery)
+    tileLayersRef.current.satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+      maxZoom: 19
+    });
+
+    // Terrain map (Stamen Terrain)
+    tileLayersRef.current.terrain = L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/terrain/{z}/{x}/{y}{r}.png', {
+      attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 18
+    });
+
+    // Add default layer
+    tileLayersRef.current.street.addTo(mapRef.current);
+  }, []);
+
+  // Update map layer visibility
+  const updateMapLayers = useCallback(() => {
+    if (!mapRef.current) return;
+
+    Object.entries(mapLayers).forEach(([layer, isVisible]) => {
+      if (isVisible) {
+        tileLayersRef.current[layer].addTo(mapRef.current);
+      } else {
+        tileLayersRef.current[layer].remove();
+      }
+    });
+  }, [mapLayers]);
+
+  // Effect to handle layer changes
+  useEffect(() => {
+    updateMapLayers();
+  }, [mapLayers, updateMapLayers]);
+
   // Initialize map
   useEffect(() => {
-    if (mapRef.current) return; // Prevent multiple initializations
+    if (mapRef.current) return;
 
-    mapRef.current = L.map('map').setView(
-      [TACAONGAGA_CENTER.lat, TACAONGAGA_CENTER.lng],
-      TACAONGAGA_CENTER.zoom
-    );
+    mapRef.current = L.map('map', {
+      center: [TACAONGAGA_CENTER.lat, TACAONGAGA_CENTER.lng],
+      zoom: TACAONGAGA_CENTER.zoom,
+      zoomControl: false // We'll add custom zoom control
+    });
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
+    // Add zoom control to top right
+    L.control.zoom({
+      position: 'topright'
     }).addTo(mapRef.current);
+
+    // Add scale control
+    L.control.scale({
+      imperial: false,
+      position: 'bottomright'
+    }).addTo(mapRef.current);
+
+    // Initialize layers
+    initializeMapLayers();
 
     // Add location label
     L.marker([TACAONGAGA_CENTER.lat, TACAONGAGA_CENTER.lng])
@@ -141,7 +202,7 @@ const PlantingMap = () => {
         markersLayerRef.current = null;
       }
     };
-  }, [updateMarkers]);
+  }, [updateMarkers, initializeMapLayers]);
 
   // Debounce function
   function debounce(func, wait) {
@@ -157,7 +218,7 @@ const PlantingMap = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="p-8 space-y-8 max-w-7xl mx-auto">
       <h2 className="text-3xl font-bold text-accent">Planting Map - Tacaongaga, Manay</h2>
       <div className="flex gap-4">
         <div className="relative w-3/4">
@@ -167,6 +228,43 @@ const PlantingMap = () => {
               Loading markers...
             </div>
           )}
+          {/* Map Layer Controls */}
+          <div className="absolute top-4 left-4 bg-white p-3 rounded-lg shadow-lg space-y-2 z-[1000] border border-gray-200">
+            <h3 className="text-sm font-medium text-gray-700 mb-2">Map View</h3>
+            <div className="flex items-center gap-2">
+              <input
+                type="radio"
+                id="street"
+                name="mapLayer"
+                checked={mapLayers.street}
+                onChange={() => setMapLayers({ street: true, satellite: false, terrain: false })}
+                className="w-4 h-4"
+              />
+              <label htmlFor="street" className="text-sm text-gray-700">Street</label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="radio"
+                id="satellite"
+                name="mapLayer"
+                checked={mapLayers.satellite}
+                onChange={() => setMapLayers({ street: false, satellite: true, terrain: false })}
+                className="w-4 h-4"
+              />
+              <label htmlFor="satellite" className="text-sm text-gray-700">Satellite</label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="radio"
+                id="terrain"
+                name="mapLayer"
+                checked={mapLayers.terrain}
+                onChange={() => setMapLayers({ street: false, satellite: false, terrain: true })}
+                className="w-4 h-4"
+              />
+              <label htmlFor="terrain" className="text-sm text-gray-700">Terrain</label>
+            </div>
+          </div>
         </div>
         <div className="w-1/4 p-4 bg-white rounded-lg shadow-md">
           <h3 className="text-xl font-semibold mb-4">Plot Information</h3>

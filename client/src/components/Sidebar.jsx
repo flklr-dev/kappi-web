@@ -35,10 +35,10 @@ const Sidebar = () => {
                     className={`flex items-center gap-3 px-4 py-3 mx-2 rounded-lg transition-colors ${
                       isActive
                         ? 'bg-primary text-white'
-                        : 'text-gray-600 hover:text-primary hover:bg-gray-50'
+                        : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
                     }`}
                   >
-                    <Icon className="h-5 w-5" />
+                    <Icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-gray-500'}`} />
                     <span>{item.name}</span>
                   </Link>
                 </li>

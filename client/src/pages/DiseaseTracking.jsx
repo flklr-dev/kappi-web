@@ -21,8 +21,13 @@ const DiseaseTracking = () => {
   ];
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-3xl font-bold text-accent">Disease Tracking</h2>
+    <div className="p-8 space-y-8 max-w-7xl mx-auto">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-3xl font-bold text-accent">Disease Tracking</h2>
+          <p className="text-gray-500 mt-1">Monitor and manage plant diseases across plots</p>
+        </div>
+      </div>
       
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
